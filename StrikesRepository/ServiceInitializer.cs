@@ -7,26 +7,20 @@ using StrikesLibrary;
 
 namespace StrikesRepository
 {
-    public class ServiceProviderBuilder : IServiceProviderBuilder
+    public class ServiceInitializer : IServiceInitializer
     {
-        public IServiceProvider BuildServiceProvider()
+        public void RegisterServices(ServiceCollection services)
         {
-            var services = new ServiceCollection();
-            services.AddSingleton(typeof(AzureSearchServiceContext),
-                new AzureSearchServiceContext(
+            services.AddSingleton(provider => new AzureSearchServiceContext(
                     AzureSearchConfiguration.SearchServiceName,
                     AzureSearchConfiguration.SearchAdminApiKey,
                     CosmosDBConfiguration.EndPointUrl,
                     CosmosDBConfiguration.PrimaryKey,
                     CosmosDBConfiguration.DatabaseId,
-                    LoggerFactory.CreateLogger(LogCategories.CreateTriggerCategory("Http"))
-                )
-            );
+                    provider.GetService<ILogger>()
+            ));
             services.AddSingleton<ISearchRepository, SearchRepository>();
             services.AddSingleton<SearchService, SearchService>();
-
-
-            return services.BuildServiceProvider(true);
         }
 
         public ILoggerFactory LoggerFactory { get; set; }

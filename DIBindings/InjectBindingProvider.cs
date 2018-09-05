@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace DIBindings
 {
@@ -26,16 +27,19 @@ namespace DIBindings
         {
             if (this.serviceProvider == null)
             {
-                this.serviceProvider = CreateServiceProvider(context.Parameter.Member.DeclaringType.Assembly);
+                this.serviceProvider = CreateServiceProvider(context);
             }
             IBinding binding = new InjectBinding(this.serviceProvider, context.Parameter.ParameterType);
             return Task.FromResult(binding);
         }
-        private IServiceProvider CreateServiceProvider(Assembly assembly)
+        private IServiceProvider CreateServiceProvider(BindingProviderContext context)
         {
-            var builder = ServiceProviderBuilderHelper.GetBuilder(assembly);
-            builder.LoggerFactory = _loggerFactory;
-            return builder.BuildServiceProvider();
+            var initializer = ServiceInitializerHelper.GetServiceInitializer(context.Parameter.ParameterType.Assembly);
+            var services = new ServiceCollection();
+            // add framework services
+            services.AddSingleton<ILogger>(_loggerFactory.CreateLogger(context.Parameter.ParameterType));
+            initializer.RegisterServices(services);
+            return services.BuildServiceProvider(true);
         }
     }
 }
